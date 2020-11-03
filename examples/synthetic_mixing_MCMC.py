@@ -7,7 +7,7 @@ Error in estimation is assumed to be normally distributed with zero mean and con
 
 Model parameters:
 number_iterations => Number of model runs
-LAMBDA_params => Fraction of source 1 in the mixture
+lambda_params => Fraction of source 1 in the mixture
 LIKELIHOOD_std_params => Fixed value
 
 SourceFiles used: NONE
@@ -87,8 +87,8 @@ while (LAMBDA <= 0.96):
 	
 	
 #	scatterplot_orig_lambda.append(LAMBDA)
-#	scatterplot_sim_lambda.append(np.median(LAMBDA_params[0:int(BEST_SIM_PER * number_iterations / 100.)]))
-#	print (LAMBDA, np.median(LAMBDA_params[0:int(BEST_SIM_PER * number_iterations / 100.)]))
+#	scatterplot_sim_lambda.append(np.median(lambda_params[0:int(best_sim_per * number_iterations / 100.)]))
+#	print (LAMBDA, np.median(lambda_params[0:int(best_sim_per * number_iterations / 100.)]))
 	LAMBDA += 0.05
 	
 	

@@ -15,8 +15,6 @@ Figures made:
 OutputFiles/GW_conceptual/SF_SM_boxplot.jpeg
 
 """
-# %% Imports
-
 from __future__ import division
 import numpy as np
 import random

@@ -21,24 +21,24 @@ import matplotlib.pyplot as plt
 from hydromix.mixingfunctions import *
 # Main variables
 
-RAIN_EFF, SNOW_EFF = 0.1, 0.1
+rain_eff, snow_eff = 0.1, 0.1
 
 # Mixing model parameters
-NUMBER_ITERATIONS = 1000
-LAMBDA_RANGE = [0., 1.]  # LAMBDA values imply the fraction of snow in groundwater
+number_iterations = 1000
+lambda_range = [0., 1.]  # LAMBDA values imply the fraction of snow in groundwater
 # Number of best simulations using which lambda is computed
-BEST_SIM_PER = 5.  # In percentage
+best_sim_per = 5.  # In percentage
 
-YEARS = 100  # Number of years for which simulation was carried out
-LAST_YEARS = 2  # Number of years at the end of the timeseries from which isotopic data is sampled
+years = 100  # Number of years for which simulation was carried out
+last_years = 2  # Number of years at the end of the timeseries from which isotopic data is sampled
 
 # Options are "Snowfall/Snowmelt", tells us which isotopic ratio is to be used to find groundwater recharge using HydroMix
-WHICH_SNOW = "Snowfall"
-WEIGHTED = 0  # 0 => non-weighted mixing, 1 => weighted mixing
+which_snow = "Snowfall"
+weighted = 0  # 0 => non-weighted mixing, 1 => weighted mixing
 
 PATH = "../../../Downloads/Zenodo_dataset/Zenodo_dataset/OutputFiles/GW_conceptual/"
-outputpath = "OutputFiles/GW_conceptual/Rainfall_" + WHICH_SNOW + "_mixing_last_" + str(LAST_YEARS) + "Yr"
-if (WEIGHTED):
+outputpath = "OutputFiles/GW_conceptual/Rainfall_" + which_snow + "_mixing_last_" + str(last_years) + "Yr"
+if weighted:
     outputpath += "_weighted/"
 else:
     outputpath += "/"
@@ -50,11 +50,11 @@ random.seed(55452)  # Setting up random seed for the random function
 
 # %% Mixing for all the proportions of rain and snow efficiency in recharging groundwater
 
-while (RAIN_EFF <= 1.):
-    SNOW_EFF = 0.1
-    while (SNOW_EFF <= 1.):
+while rain_eff <= 1.:
+    snow_eff = 0.1
+    while snow_eff <= 1.:
 
-        filename = PATH + "RAIN_" + str(RAIN_EFF) + "_SNOW_" + str(SNOW_EFF) + ".csv"
+        filename = PATH + "RAIN_" + str(rain_eff) + "_SNOW_" + str(snow_eff) + ".csv"
         df = pd.read_csv(filename)
 
         # Computing the proportion of groundwater recharged from snow in long term
@@ -63,14 +63,14 @@ while (RAIN_EFF <= 1.):
         actual_snow_ratio_long_term = recharge_snow_amount / (recharge_rain_amount + recharge_snow_amount)
 
         # Computing the proportion of groundwater recharged from snow in short term (corresponding to the isotopic data period)
-        recharge_rain_amount = sum(df["Rain recharge (mm)"].values[(YEARS - LAST_YEARS) * 365:])
-        recharge_snow_amount = sum(df["Snow recharge (mm)"].values[(YEARS - LAST_YEARS) * 365:])
+        recharge_rain_amount = sum(df["Rain recharge (mm)"].values[(years - last_years) * 365:])
+        recharge_snow_amount = sum(df["Snow recharge (mm)"].values[(years - last_years) * 365:])
         actual_snow_ratio_short_term = recharge_snow_amount / (recharge_rain_amount + recharge_snow_amount)
 
         # Building list containing isotopic ratio of rain, snowfall and groundwater
         random_rain_iso, random_snow_iso, random_gw_iso = [], [], []
         random_rain_amount, random_snow_amount = [], []  # Amount of rain and snowmelt corresponding to the isotopic ratio
-        for year_index in range(YEARS - LAST_YEARS, YEARS):
+        for year_index in range(years - last_years, years):
             for month in range(1, 13):
 
                 # Subsetting the dataframe
@@ -84,11 +84,11 @@ while (RAIN_EFF <= 1.):
                                       start_index: end_index + 1]  # Isotopic ratio of rainfall
 
                 # Amount of snowfall or snowmelt
-                if (WHICH_SNOW == "Snowfall"):
+                if (which_snow == "Snowfall"):
                     snow_amount = df["Snowfall (mm)"].values[start_index: end_index + 1]  # Amount of snowfall
                     snow_isotopic_ratio = df["Precip isotopic ratio"].values[
                                           start_index: end_index + 1]  # Snowfall isotopic ratio
-                elif (WHICH_SNOW == "Snowmelt"):
+                elif (which_snow == "Snowmelt"):
                     snow_amount = df["Snowmelt (mm)"].values[start_index: end_index + 1]  # Amount of snowmelt
                     # Shifted up by 1 row because the current snowmelt isotopic ratio is the snowpack isotopic ratio at the last timestep
                     snow_isotopic_ratio = df["Snowpack isotopic ratio"].values[
@@ -136,29 +136,29 @@ while (RAIN_EFF <= 1.):
 
         # Running the mixing model
         # Initializing mixing model parameters
-        LAMBDA_params = np.random.uniform(LAMBDA_RANGE[0], LAMBDA_RANGE[1], NUMBER_ITERATIONS)
-        LIKELIHOOD_std_params_H2 = np.full(NUMBER_ITERATIONS, np.std(random_gw_iso,
-                                                                     ddof=1))  # Computing the variance of error from groundwater samples
-
-        if (WEIGHTED):  # Running HydroMix taking into account weights
-            LIKELIHOOD_H2, LAMBDA_H2, ErrorSTD_H2 = hydro_mix_weighted(random_snow_iso, random_snow_weight,
-                                                                       random_rain_iso, random_rain_weight,
-                                                                       random_gw_iso, LAMBDA_params,
-                                                                       LIKELIHOOD_std_params_H2, NUMBER_ITERATIONS)
-        else:  # Running HydroMix without taking into account weights
-            LIKELIHOOD_H2, LAMBDA_H2, ErrorSTD_H2 = hydro_mix(random_snow_iso, random_rain_iso, random_gw_iso,
-                                                              LAMBDA_params, LIKELIHOOD_std_params_H2, NUMBER_ITERATIONS)
+        LAMBDA_params = np.random.uniform(lambda_range[0], lambda_range[1], number_iterations)
+        # Computing the variance of error from groundwater samples
+        LIKELIHOOD_std_params_H2 = np.full(number_iterations, np.std(random_gw_iso, ddof=1))
+        if weighted:  # Running HydroMix taking into account weights
+            likelihood_h2, lambda_h2, error_std_h2 = hydro_mix_weighted(random_snow_iso, random_snow_weight,
+                                                                        random_rain_iso, random_rain_weight,
+                                                                        random_gw_iso, LAMBDA_params,
+                                                                        LIKELIHOOD_std_params_H2, number_iterations)
+        else:
+            # Running HydroMix without taking into account weights
+            likelihood_h2, lambda_h2, error_std_h2 = hydro_mix(random_snow_iso, random_rain_iso, random_gw_iso,
+                                                               LAMBDA_params, LIKELIHOOD_std_params_H2, number_iterations)
 
         # Writing in a csv file
         final_lis = [["Snow ratio", "Log likelihood", "Error std"]]
-        path = outputpath + "results_RAIN_" + str(RAIN_EFF) + "_SNOW_" + str(SNOW_EFF) + ".csv"
-        for index in range(0, len(LIKELIHOOD_H2)):
-            final_lis.append([round(LAMBDA_H2[index], 2), round(LIKELIHOOD_H2[index], 2), round(ErrorSTD_H2[index], 2)])
+        path = outputpath + "results_RAIN_" + str(rain_eff) + "_SNOW_" + str(snow_eff) + ".csv"
+        for index in range(0, len(likelihood_h2)):
+            final_lis.append([round(lambda_h2[index], 2), round(likelihood_h2[index], 2), round(error_std_h2[index], 2)])
         print(path)
 
         # Creating and saving figure
         plt.figure(figsize=(10, 6))
-        plt.hist(LAMBDA_H2[0:int(0.01 * BEST_SIM_PER * NUMBER_ITERATIONS)], color='blue', alpha=0.4,
+        plt.hist(lambda_h2[0:int(0.01 * best_sim_per * number_iterations)], color='blue', alpha=0.4,
                  label=r'$\delta^{2}$H' + u' \u2030 (VSMOW)', normed='True')
         plt.axvline(x=actual_snow_ratio_long_term, label='Groundwater recharged from snowmelt (long term)', color='red')
         plt.axvline(x=actual_snow_ratio_short_term, label='Groundwater recharged from snowmelt (short term)',
@@ -169,13 +169,13 @@ while (RAIN_EFF <= 1.):
         plt.ylabel("Normalised frequency", fontsize=14)
         plt.legend()
         plt.tight_layout()
-        path = outputpath + "Figures/posterior_RAIN_" + str(RAIN_EFF) + "_SNOW_" + str(SNOW_EFF) + ".jpeg"
+        path = outputpath + "Figures/posterior_RAIN_" + str(rain_eff) + "_SNOW_" + str(snow_eff) + ".jpeg"
         plt.savefig(path, dpi=300)
         plt.close()
         print(path)
 
         del df
 
-        SNOW_EFF += 0.1
+        snow_eff += 0.1
 
-    RAIN_EFF += 0.1
+    rain_eff += 0.1

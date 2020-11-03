@@ -171,7 +171,7 @@ while rain_eff <= 1.:
 
         #		# Creating and saving figure
         #		plt.figure(figsize=(10,6))
-        #		plt.hist(LAMBDA_H2[0:int(0.01 * BEST_SIM_PER * number_iterations)], color='blue', alpha=0.4, label=r'$\delta^{2}$H' + u' \u2030 (VSMOW)', normed='True')
+        #		plt.hist(lambda_h2[0:int(0.01 * best_sim_per * number_iterations)], color='blue', alpha=0.4, label=r'$\delta^{2}$H' + u' \u2030 (VSMOW)', normed='True')
         #		plt.axvline(x=actual_snow_ratio_long_term, label='Groundwater recharged from snowmelt (long term)', color='red')
         #		plt.axvline(x=actual_snow_ratio_short_term, label='Groundwater recharged from snowmelt (short term)', color='black')
         #		plt.xlim(0., 1.)
