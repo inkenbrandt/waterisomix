@@ -6,6 +6,9 @@ import PyMC3
 import statsmodels
 import pandas as pd
 import numpy as np
+from scipy.stats import multivariate_normal
+from scipy.stats import dirichlet
+from scipy.stats import norm
 #####functions here
 
 #####
@@ -15,109 +18,160 @@ import numpy as np
 
 # takes values of H and O isotope composition, SD of each, and covariance
 def iso(H, O, Hsd, Osd, HOc):
-    return pd.DataFrame([H, O, Osd, Hsd, HOc])
+    varibs = {'H':H, 'O':O, 'Hsd':Hsd, 'Osd':Osd, 'HOc':HOc}
+    for key in varibs.keys():
+        if type(varibs[key]) == np.ndarray or type(varibs[key]) == list:
+            pass
+        else:
+            varibs[key] = np.array(varibs[key])
+
+    if np.size(varibs['H'])==np.size(varibs['O'])==np.size(varibs['Hsd'])==np.size(varibs['HOc']):
+        data = []
+        if np.size(varibs['H'])>1:
+            for i in range(np.size(varibs['H'])):
+                print(np.size(varibs['H']))
+                data.append([varibs['H'][i],varibs['O'][i],
+                             varibs['Hsd'][i],varibs['Osd'][i],
+                             varibs['HOc'][i]])
+        else:
+            data.append([varibs['H'],varibs['O'],
+                             varibs['Hsd'],varibs['Osd'],
+                             varibs['HOc']])
+        return pd.DataFrame(data, columns=['H','O','Hsd','Osd','HOc'])
+    else:
+        print('lengths of data do not match')
+    return pd.DataFrame(data, columns=varibs.keys())
 
 #####
 # --- single source implementation ----
 #####
+def rmvnorm(obs, ngens=1):
+    mean = [obs['H'],obs['O']]
+    sigma = [[obs['Hsd']**2,obs['HOc']*obs['Hsd']*obs['Osd']],
+                         [obs['HOc']*obs['Hsd']*obs['Osd'],obs['Osd']**2]]
 
-# takes values of observed and hypothesized source water (each type 'iso'), hypothesized EL slope value
-# prior probability of source, and number of parameter draws
-def sourceprob(obsdf, hsource, hslope, prior=1, ngens=10000):
+    s = np.random.multivariate_normal(mean, sigma, ngens)[0]
+    return s
+
+def dmvnorm(obs, ngens=1):
+    x = obs['HO_hypo']
+    mean = [obs['H'],obs['O']]
+    sigma = [[obs['Hsd']**2,obs['HOc']*obs['Hsd']*obs['Osd']],
+                         [obs['HOc']*obs['Hsd']*obs['Osd'],obs['Osd']**2]]
+    rv = multivariate_normal(mean, sigma, ngens)
+    s = rv.pdf(x)
+    return s
+
+
+def rmvnorm(obs, ngens=10000):
+    mean = [obs['H'][0],obs['O'][0]]
+    sigma = [[obs['Hsd'][0]**2,obs['HOc'][0]*obs['Hsd'][0]*obs['Osd'][0]],
+                         [obs['HOc'][0]*obs['Hsd'][0]*obs['Osd'][0],obs['Osd'][0]**2]]
+
+    s = np.random.multivariate_normal(mean, sigma, ngens)
+    return s
+
+def mskfunc(x):
+    if x['H_h'] > x['H_obs'] or x['O_h'] > x['O_obs']:
+        return 0
+    else:
+        return 1
+
+def sourceprob(obs, hsource, hslope, ngens=1000):
+    """takes values of observed and hypothesized source water (each type 'iso'), hypothesized EL slope value
+    prior probability of source, and number of parameter draws
+
+    Args:
+        obs: observed source water
+        hsource: hypothesized source water
+        hslope: hypothesized EL slope value (value, sd)
+        ngens: number of parameter draws
+
+    Returns:
+
+    """
     # ngens observed values
+    mean = [obs['H'][0],obs['O'][0]]
+    sigma = [[obs['Hsd'][0]**2,obs['HOc'][0]*obs['Hsd'][0]*obs['Osd'][0]],
+                         [obs['HOc'][0]*obs['Hsd'][0]*obs['Osd'][0],obs['Osd'][0]**2]]
 
-    HO_obs = rmvnorm(ngens, [obsdf['H'], obsdf['O']],
-                     matrix([obs['Hsd'] ** 2, rep(obsdf['HOc'] * obsdf['Hsd'] * obsdf['Osd'], 2), obs['Osd'] ** 2), 2, 2))
-    H_obs = HO_obs[, 1]
-    O_obs = HO_obs[, 2]
-    obs_prob = vector(, ngens)
-    for (i in 1:ngens):
-        obs_prob[i] = dmvnorm(c(H_obs[i], O_obs[i]), c(obs$H, obs$O), sigma=matrix(c(obs$Hsd ^ 2, rep(obs$HOc * obs$Hsd * obs$Osd, 2), obs$Osd ^ 2), 2, 2))
+    s = np.random.multivariate_normal(mean, sigma, ngens)
+    HO_obs = pd.DataFrame(s, columns=['H_obs','O_obs'])
 
+    HO_obs['obs_prob'] = HO_obs[['H_obs','O_obs']].apply(lambda x: multivariate_normal.pdf(x, mean=mean, cov=sigma),1)
 
     # ngens hypothesized source values
-    HO_h = rmvnorm(ngens, c(hsource$H, hsource$O), matrix(c(hsource$Hsd ^ 2, rep(
-    hsource$HOc * hsource$Hsd * hsource$Osd, 2), hsource$Osd ^ 2), 2, 2))
-    H_h = HO_h[, 1]
-    O_h = HO_h[, 2]
-    hypo_prob = vector(, ngens)
-    for (i in 1:ngens):
-        hypo_prob[i] = dmvnorm(c(H_h[i], O_h[i]), c(hsource$H, hsource$O), sigma=matrix(c(hsource$Hsd ^ 2, rep(hsource$HOc * hsource$Hsd * hsource$Osd, 2), hsource$Osd ^ 2), 2, 2))
+    mean = [hsource['H'][0],hsource['O'][0]]
+    sigma = [[hsource['Hsd'][0]**2,hsource['HOc'][0]*hsource['Hsd'][0]*hsource['Osd'][0]],
+                         [hsource['HOc'][0]*hsource['Hsd'][0]*hsource['Osd'][0],hsource['Osd'][0]**2]]
 
-    # get slope and standardized source probability for each case
-    S = (H_obs - H_h) / (O_obs - O_h)
-    Sprob = dnorm(S, hslope[1], hslope[2]) / dnorm(hslope[1], hslope[1], hslope[2])
+    s = np.random.multivariate_normal(mean, sigma, ngens)
+    HO_h = pd.DataFrame(s, columns=['H_h','O_h'])
+    HO_h['hypo_prob'] = HO_h[['H_h','O_h']].apply(lambda x: multivariate_normal.pdf(x, mean=mean, cov=sigma),1)
 
-    # if sample value lies below or left of source evaporation can't explain it
-    msk = ifelse(H_h > H_obs | O_h > O_obs, 0, 1)
-    Sprob = Sprob * msk
-    goods = sum(msk)
+    HO = pd.concat([HO_obs,HO_h],axis=1)
+    HO['slope'] = (HO['H_obs']-HO['H_h'])/(HO['O_obs']-HO['O_h'])
 
-    results = pd.DataFrame([H_h, O_h, hypo_prob, H_obs, O_obs, obs_prob, Sprob])  # return data frame w/ all draws
+    HO['Sprob'] = norm.pdf(HO['slope'],hslope[0],hslope[1])/norm.pdf(hslope[0],hslope[0],hslope[1])
 
-    print(paste(goods, "out of", ngens))  # how many non-zero probabilities?
-
-    return (results)
-
-}
+    HO['msk'] = HO.apply(lambda x: mskfunc(x),1)
+    HO['SprbMsk'] = HO['msk']*HO['Sprob']
+    goods = HO['msk'].sum()
+    print(f"{goods} out of {ngens}")
+    return HO
 
 #####
 # --- MWL source implementation ----
 #####
+def mwlsource(obs, hslope, mwl=[8.01, 9.57, 167217291.1, 2564532.2, -8.096, 80672], ngens=10000):
+    """takes values of observed water (type 'iso'), MWL (see below), hypothesized EL slope value
+    and number of parameter draws
 
-# takes values of observed water (type 'iso'), MWL (see below), hypothesized EL slope value
-# and number of parameter draws
-mwlsource = function(obs, mwl=c(8.01, 9.57, 167217291.1, 2564532.2, -8.096, 80672), hslope, ngens=10000)
-{
-# mwl contains parameters for the meteoric water line:
-# slope, intercept, sum of squares in d2H, sum of squares in d18O, average d18O, and number of samples.
-# Defaults were calculated from precipitation samples extracted from waterisotopes.org DB on 7/7/2017,
-# screened to include only samples with -10 < Dex < 30
+    Args:
+        obs: observed source water
+        mwl: meteoric water line = slope, intercept, sum of squares in d2H, sum of squares in d18O, average d18O, and number of samples.
+        hslope: hypothesized EL slope
+        ngens: number of parameter draws
 
-# establish credible range for source water d18O
-o_cent = (mwl[2] - (obs$H - hslope[1] * obs$O)) / (hslope[1] - mwl[1])
-o_min = o_cent - 10
-o_max = o_cent + 5
-sr = sqrt((mwl[3] - (mwl[1] ^ 2 * mwl[4])) / (mwl[6] - 2))  ##sum of squares
+    Returns:
 
-# space for results
-results = data.frame(
-    "H_h" = double(), "O_h" = double(), "hypo_prob" = double(), "H_obs" = double(), "O_obs" = double(), "obs_prob" = double(), "Sprob" = double())
-i = 1
+    """
 
-# iterate until ngens draws in posterior
-while (i <= ngens){
+    o_cent = (mwl[1] - (obs['H'][0] - hslope[0]*obs['O'][0]))/(hslope[0]-mwl[0])
+    o_min = o_cent - 10
+    o_max = o_cent + 5
+    sr = np.sqrt((mwl[2]-(mwl[0]**2 * mwl[3]))/(mwl[5]-2))
 
-# observed H and O values from bivariate normal
-HO_obs = rmvnorm(1, c(obs$H, obs$O), matrix(c(obs$Hsd ^ 2, rep(obs$HOc * obs$Hsd * obs$Osd, 2), obs$Osd ^ 2), 2, 2))
+    mean = [obs['H'][0],obs['O'][0]]
+    sigma = [[obs['Hsd'][0]**2,obs['HOc'][0]*obs['Hsd'][0]*obs['Osd'][0]],
+                         [obs['HOc'][0]*obs['Hsd'][0]*obs['Osd'][0],obs['Osd'][0]**2]]
 
-# hypothesized source O from uniform spanning interval obtained above
-O_h = o_min + runif(1) * (o_max - o_min)
+    HO_dict = {}
+    i = 1
+    while i <= ngens:
+        HO_obs = np.random.multivariate_normal(mean, sigma, 1)[0]
+        O_h = o_min + np.random.rand(1) * (o_max - o_min)
 
-# use st err of prediction to draw hypothesized source H from normal distribution around MWL
-sy = sr * sqrt(1 + 1 / mwl[6] + (O_h - mwl[5]) ^ 2 / mwl[4])  ##prediction standard error, e.g., http://science.widener.edu/svb/stats/regress.html and http://www.real-statistics.com/regression/confidence-and-prediction-intervals/
-H_h = rnorm(1, O_h * mwl[1] + mwl[2], sy)
+        sy = sr * np.sqrt(1 + 1 / mwl[5] + (O_h - mwl[4])**2 / mwl[3])
+        H_h = np.random.normal(O_h*mwl[0], sy, 1)
+        S = (HO_obs[0]-H_h)/(HO_obs[1]-O_h)
+        Sprob = norm.pdf(S, hslope[0], hslope[1])/norm.pdf(hslope[0], hslope[0], hslope[1])
 
-# get slope for draw and standardized probability
-S = (HO_obs[1]-H_h) / (HO_obs[2]-O_h)
-Sprob = dnorm(S, hslope[1], hslope[2]) / dnorm(hslope[1], hslope[1], hslope[2])
-Sprob = ifelse(H_h > HO_obs[1] | O_h > HO_obs[2], 0, Sprob)
+        if H_h > HO_obs[0] or O_h > HO_obs[1]:
+            Sprob = 0
+        else:
+            pass
 
-# keep it or discard
-if (runif(1) < Sprob){
-hypo_prob = dnorm(H_h, O_h * mwl[1] + mwl[2], sy)
-obs_prob = dmvnorm(c(HO_obs[1], HO_obs[2]), c(obs$H, obs$O), sigma=matrix(c(obs$Hsd ^ 2, rep(obs$HOc * obs$Hsd * obs$Osd, 2), obs$Osd ^ 2), 2, 2))
-results = rbind(results, c(H_h, O_h, hypo_prob, HO_obs[1], HO_obs[2], obs_prob, Sprob, 0))
-i=i+1
-}
-}
+        if np.random.rand(1) < Sprob:
+            hypo_prob = norm.pdf(H_h, O_h*mwl[0]+mwl[1],sy)
+            obs_prob = multivariate_normal.pdf([HO_obs[0],HO_obs[1]], mean, cov = sigma)
+            HO_dict[i] = [H_h[0], O_h[0], hypo_prob[0], HO_obs[0], HO_obs[1], obs_prob, Sprob[0]]
+            i += 1
 
-# reassign names to results dataframe
-results @ names = c("H_h", "O_h", "hypo_prob", "H_obs", "O_obs", "obs_prob", "Sprob")
-
-return (results)
-
-}
+    HO = pd.DataFrame.from_dict(HO_dict,
+                                orient='index',
+                                columns=['H_h', 'O_h', 'hypo_prob', 'H_obs', 'O_obs', 'obs_prob', 'Sprob'])
+    return HO
 
 #####
 # --- Mixtures implementation ----
@@ -125,89 +179,64 @@ return (results)
 
 # takes values of observed and hypothesized endmember source waters (each type 'iso'),hypothesized EL slope,
 # prior (as relative contribution of each source to mixture), and number of parameter draws
-mixprob = function(obs, hsource, hslope, prior=rep(1, nrow(hsource)), shp=2, ngens=10000)
-{
 
-# get number of sources
-nsource = nrow(hsource)
+def mixprob(obs, hsource, hslope, prior=None, shp=2, ngens=10000):
+    """takes values of observed and hypothesized endmember source waters (each type 'iso'),hypothesized EL slope,
+    prior (as relative contribution of each source to mixture), and number of parameter draws
 
-# set up spaces and indicies
-i = 1;
-iter = 1
-HO_hypo = matrix(, nsource, 2)
-H_obs = vector(, ngens)
-O_obs = vector(, ngens)
-H_h = vector(, ngens)
-O_h = vector(, ngens)
-fracs = matrix(, ngens, nsource)
-obs_prob = vector(, ngens)
-hypo_prob = vector(, ngens)
-fracs_prob = vector(, ngens)
-Sprob = vector(, ngens)
-prob_hold = vector(, nsource)
+    Args:
+        obs: observed endmember source water
+        hsource: hypothesized endmember source water
+        hslope: hypothesized EL slope (slope, slope sd)
+        prior: prior (as relative contribution of each source to mixture)
+        shp: 2
+        ngens: number of parameter draws
 
-# iterate until ngens draws in posterior
-while (i <= ngens){
-# observed values; note that DoParllel needs namespace for mvtnorm functions
-HO_obs = mvtnorm::
-    rmvnorm(1, c(obs$H, obs$O), matrix(c(obs$Hsd ^ 2, rep(obs$HOc * obs$Hsd * obs$Osd, 2), obs$Osd ^ 2), 2, 2))
-H_obs[i] = HO_obs[1]
-O_obs[i] = HO_obs[2]
+    Returns:
 
-# hypothesized values
-for (j in 1:nsource){
-    HO_hypo[j,] = mvtnorm::
-    rmvnorm(1, c(hsource$H[j], hsource$O[j]), matrix(c(hsource$Hsd[j] ^ 2, rep(hsource$HOc[j] * hsource$Hsd[
-                                                                                                            j] * hsource$
-Osd[j], 2), hsource$Osd[j] ^ 2), 2, 2))
-}
+    """
+    nsource = len(hsource)
 
-# mixture
-alphas = prior / min(prior) * shp
-fracs[i,] = MCMCpack::rdirichlet(1, alphas)
-H_h[i] = sum(HO_hypo[, 1] *fracs[i,])
-O_h[i] = sum(HO_hypo[, 2] *fracs[i,])
+    mean = [obs['H'][0],obs['O'][0]]
+    sigma = [[obs['Hsd'][0]**2,obs['HOc'][0]*obs['Hsd'][0]*obs['Osd'][0]],
+                         [obs['HOc'][0]*obs['Hsd'][0]*obs['Osd'][0],obs['Osd'][0]**2]]
 
-# evaluate conditional probability
-if (H_h > H_obs | | O_h > O_obs){
-Sprob[i] = 0
-} else {
-S = (H_obs[i]-H_h[i]) / (O_obs[i]-O_h[i])
-Sprob[i] = dnorm(S, hslope[1], hslope[2]) / dnorm(hslope[1], hslope[1], hslope[2])
-}
+    if prior is None:
+        prior = np.repeat([1],nsource)
+    it = 1
+    i = 1
+    HO_hypo = {}
+    while i <= ngens:
+        HO_obs = np.random.multivariate_normal(mean, sigma, 1)[0]
+        hsource['HO_hypo'] = hsource.apply(lambda x: rmvnorm(x, 1),1)
+        alphas = prior/np.min(prior) * shp
+        fracs = dirichlet.rvs(alphas, size = 1)[0]
+        H_h = hsource['HO_hypo'].apply(lambda x: x[0]*fracs[0],1).sum()
+        O_h = hsource['HO_hypo'].apply(lambda x: x[1]*fracs[0],1).sum()
+        if (H_h > HO_obs[0]) or (O_h > HO_obs[1]):
+            Sprob = 0
+        else:
+            S = (HO_obs[0]-H_h)/(HO_obs[1]-O_h)
+            Sprob = norm.pdf(S, hslope[0], hslope[1])/norm.pdf(hslope[0], hslope[0], hslope[1])
+        if np.random.rand(1) < Sprob:
+            obs_prob = multivariate_normal.pdf(HO_obs, mean, cov = sigma)
+            fracs_prob = dirichlet.pdf(fracs,alphas)
+            hsource['prob_hold'] = hsource.apply(lambda x: dmvnorm(x),1)
+            hypo_prob = hsource['prob_hold'].product()
+            HO_hypo[i] = [H_h, O_h, hypo_prob,
+                          HO_obs[0], HO_obs[1],
+                          obs_prob, fracs, fracs_prob, Sprob]
+            i+=1
 
-# check whether to retain
-if (runif(1) < Sprob[i]){
-obs_prob[i] = mvtnorm::
-    dmvnorm(HO_obs, sigma=matrix(c(obs$Hsd ^ 2, rep(obs$HOc * obs$Hsd * obs$Osd, 2), obs$Osd ^ 2), 2, 2))
-fracs_prob[i] = MCMCpack::ddirichlet(fracs[i,], alphas)
-for (j in 1:nsource){
-    prob_hold[j] = mvtnorm::
-    dmvnorm(HO_hypo[j,], c(hsource$H[j], hsource$O[j]), matrix(c(hsource$Hsd[j] ^ 2, rep(hsource$HOc[j] * hsource$Hsd[
-                                                                                                                      j] * hsource$
-Osd[j], 2), hsource$Osd[j] ^ 2), 2, 2))
-}
-hypo_prob[i] = prod(prob_hold)
-i = i + 1
-}
-
-# check for poorly posed
-iter = iter + 1
-if (iter > 10000 & & i / iter < 0.01)
-{
-    warning("too few valid draws")
-break
-()
-}
-}
-
-# bundle results in data frame
-results = data.frame(H_h, O_h, hypo_prob, H_obs, O_obs, obs_prob, fracs, fracs_prob, Sprob)
-
-# report on efficiency
-print(paste(iter, "iterations for", ngens, "posterior samples"))
-
-return (results)
-
-}
+        it += 1
+        if it > 10000 and i/it < 0.01:
+            print("too few valid draws")
+            break
+    HO = pd.DataFrame.from_dict(HO_hypo,
+                                    orient='index',
+                                    columns=['H_h', 'O_h', 'hypo_prob',
+                                             'H_obs', 'O_obs',
+                                             'obs_prob', 'fracs', 'fracs_prob', 'Sprob'])
+    print(f"{it} iterations for {ngens} posterior samples")
+    return HO
 

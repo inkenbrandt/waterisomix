@@ -1,0 +1,12 @@
+site_name: hydromix
+
+nav:
+    - Home: index.md
+
+theme: readthedocs
+
+repo_url: Fill in your repo url here
+
+site_description: This is the documentation site for hydromix.
+
+site_author: Site created by Paul Inkenbrandt. Original package written by Harsh Beria.
