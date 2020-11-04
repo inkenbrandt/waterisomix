@@ -3,6 +3,14 @@ import numpy as np
 import random, datetime, calendar
 import pandas as pd
 import matplotlib.pyplot as plt
+import csv
+
+
+def csv_writer(data, path):
+    with open(path, "w") as csv_file:
+        writer = csv.writer(csv_file, delimiter=',')
+        for line in data:
+            writer.writerow(line)
 
 
 def random_walk(initial_param, param_limit, step):

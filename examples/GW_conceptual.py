@@ -31,7 +31,7 @@ if __name__ == "__main__":
     K_Q = 0.1  # For Q = KS
     DEGDAYFACT = 2.5  # Degree day factor in mm/C/day
     TMELT = 0.  # Temperature at which snowpack starts melting
-    CONST_STORAGE, INIT_SNOW = 1000., 0.  # Constant storage in groundwater which is not fed to streamflow and initial snow height in catchment
+    const_storage, init_snow = 1000., 0.  # Constant storage in groundwater which is not fed to streamflow and initial snow height in catchment
     varLSnowTemp, varHSnowTemp = -1., 1.  # Threshold temperature for bounding thresholding method for snowfall estimation
 
     # Parameters for generation of air temperature, precipitation and precipitation isotopic ratio
@@ -46,7 +46,7 @@ if __name__ == "__main__":
                   "Rain recharge (mm)", "Snow recharge (mm)", "Precip isotopic ratio", "Snowpack isotopic ratio",
                   "Storage isotopic ratio"]]
     snowMeltIso = []  # For storing snowmelt isotopic ratios
-    OUTPUTPATH = "OutputFiles/GW_conceptual/"
+    outputpath = "OutputFiles/GW_conceptual/"
 
     # Mixing model parameters
     NUMBER_ITERATIONS = 1000
@@ -68,21 +68,23 @@ if __name__ == "__main__":
     dayNumb = np.linspace(1, 365 * YEARS, 365 * YEARS)  # Day numbering
 
     # %% Running the hydrologic model
-    storage = [CONST_STORAGE]  # Catchment storage
-    snow_height = [INIT_SNOW]  # Snow height
+    storage = [const_storage]  # Catchment storage
+    snow_height = [init_snow]  # Snow height
     snow_melt = [0.]  # Snow melt
     storage_C = [0.]  # Isotopic ratio in catchment storage (groundwater)
     snow_C = [0.]  # Isotopic ratio in snowpack
-    rain_lis, snow_lis = [0.], [0.]  # Daily rainfall and snowfall amount
-    recharge_rain_lis, recharge_snow_lis = [0.], [0.]  # Daily groundwater recharge values from rainfall and snowmelt
+    rain_lis = [0.]
+    snow_lis = [0.]  # Daily rainfall and snowfall amount
+    recharge_rain_lis = [0.]
+    recharge_snow_lis = [0.]  # Daily groundwater recharge values from rainfall and snowmelt
     Q_flow = [0.]  # Daily flow into the stream from groundwater
 
     for index in range(len(dayNumb)):
 
         # Estimating amount of rain and snow
-        if (airTemp[index] <= varLSnowTemp):
+        if airTemp[index] <= varLSnowTemp:
             rain_frac = 0.
-        elif (airTemp[index] >= varHSnowTemp):
+        elif airTemp[index] >= varHSnowTemp:
             rain_frac = 1.
         else:
             rain_frac = (airTemp[index] - varLSnowTemp) * 1. / (varHSnowTemp - varLSnowTemp)
@@ -92,9 +94,9 @@ if __name__ == "__main__":
         snow_lis.append(snow_mag)
 
         # Computing snow height and snowmelt volume
-        if (airTemp[index] >= TMELT):
+        if airTemp[index] >= TMELT:
             melt = DEGDAYFACT * (airTemp[index] - TMELT)
-            if (melt > snow_height[-1]):  # Applying limit of available storage
+            if melt > snow_height[-1]:  # Applying limit of available storage
                 melt = snow_height[-1] + snow_lis[-1]
         else:
             melt = 0.
@@ -102,7 +104,7 @@ if __name__ == "__main__":
         snow_melt.append(melt)
 
         # Isotopic ratio of snowpack
-        if (snow_height[-1] == 0.):  # No more snowpack left
+        if snow_height[-1] == 0.:  # No more snowpack left
             newC = 0.
         else:
             newC = (snow_height[-2] * snow_C[-1] + snow_lis[-1] * prcpIso[index] - melt * snow_C[-1]) * 1. / (
@@ -117,12 +119,12 @@ if __name__ == "__main__":
 
         recharge = recharge_rain + recharge_snow
         storage.append(storage[-1] + recharge)
-        Q = K_Q * (storage[-1] - CONST_STORAGE)  # Flow into streamflow from groundwater
+        Q = K_Q * (storage[-1] - const_storage)  # Flow into streamflow from groundwater
         storage[-1] -= Q  # Updating groundwater volume
         Q_flow.append(Q)
 
         # Isotopic ratio of groundwater storage
-        if (round(storage[-1], 2) == 0.):
+        if round(storage[-1], 2) == 0.:
             newC = 0.
         else:
             newC = (storage[-2] * storage_C[-1] + rain_lis[-1] * RAIN_EFF * prcpIso[index] + snow_melt[-1] * SNOW_EFF *
@@ -136,7 +138,7 @@ if __name__ == "__main__":
 
     # %% Saving the simulated data into a csv file
 
-    path = OUTPUTPATH + "RAIN_" + str(RAIN_EFF) + "_SNOW_" + str(SNOW_EFF) + ".csv"
+    path = outputpath + "RAIN_" + str(RAIN_EFF) + "_SNOW_" + str(SNOW_EFF) + ".csv"
 
     print(path)
     #################################################################################################################################
@@ -149,7 +151,7 @@ if __name__ == "__main__":
     plt.boxplot([snowFallIso, snowMeltIso], labels=["Snowfall", "Snowmelt"])
     plt.ylabel(r'$\delta^{2}$' + 'H ' + u'\u2030' + ' (VSMOW)', fontsize=14)
     plt.tight_layout()
-    path = OUTPUTPATH + "Figures/SF_SM_boxplot.jpeg"
+    path = outputpath + "Figures/SF_SM_boxplot.jpeg"
     plt.savefig(path, dpi=300)
     plt.close()
     print(path)
