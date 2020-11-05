@@ -1,8 +1,10 @@
 try:
 
     from hydromix.mixingfunctions import *
+    from hydromix.watercomp import *
 except ImportError:
     from .mixingfunctions import *
+    from .watercomp import *
 
 __version__ = '1.0.1'
 __author__ = 'Harsh Beria'

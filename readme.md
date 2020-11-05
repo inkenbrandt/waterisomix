@@ -1,11 +1,18 @@
 # HydroMix v1.0: a new Bayesian mixing framework for attributing uncertain hydrological sources 
 Unofficial Copy of the Original Downloaded from https://doi.org/10.5281/zenodo.3475429 <br>
-Created on: 7th October 2019 (Harsh Beria)
+Original Hydromix was written by Harsh Beria.
+This library also includes scripts translated from Gabe Bowen's R library watercomp.
 
 For the publication of HydroMix, link to manuscript is:
 https://www.geosci-model-dev-discuss.net/gmd-2019-69/
 
-Code for the following case studies have been included in this document:
+## watercomp
+Scripts for paper on isotopic comparison of water samples including evaporation:
+
+Bowen, G. J., Putman, A., Brooks, J. R., Bowling, D. R., Oerter, E. J., & Good, S. P. (2018). Inferring the source of evaporated waters using stable H and O isotopes. Oecologia, 187(4), 1025-1039.
+
+Based on watercomp.R, which contains functions for conducting source water analysis
+The R script can be found at https://github.com/SPATIAL-Lab/watercompare 
 
 ## Synthetic case study
 * This has been explained in Section 3.1 of the manuscript
