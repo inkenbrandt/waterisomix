@@ -1,6 +1,6 @@
 # HydroMix v1.0: a new Bayesian mixing framework for attributing uncertain hydrological sources 
 Unofficial Copy of the Original Downloaded from https://doi.org/10.5281/zenodo.3475429 <br>
-Original Hydromix was written by Harsh Beria.
+Original Hydromix was written by Harsh Beria and can be found at https://github.com/harshberia93/HydroMix/tree/20191007_GMD
 This library also includes scripts translated from Gabe Bowen's R library watercomp.
 
 For the publication of HydroMix, link to manuscript is:
