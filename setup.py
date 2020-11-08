@@ -22,7 +22,7 @@ def get_content(*filename:str) -> str:
     return content
 
 setuptools.setup(
-    name = "hydromix", # TODO: Give the package a name
+    name = "waterisomix", # TODO: Give the package a name
     version = "0.1.1", # I recommend every 2nd decimal release (i.e. 0.x.0) for big releases and 3rd (i.e. 0.0.x) for bug fixes.
     author = "Harsh Beria", # TODO: Add your name
     author_email = "harsh.beria@unil.ch", # TODO: Add your email

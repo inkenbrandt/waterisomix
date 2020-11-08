@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/hydromix.iml" filepath="$PROJECT_DIR$/.idea/hydromix.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/waterisomix.iml" filepath="$PROJECT_DIR$/.idea/waterisomix.iml" />
     </modules>
   </component>
 </project>

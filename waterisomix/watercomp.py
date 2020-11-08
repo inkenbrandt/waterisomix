@@ -82,7 +82,7 @@ def mskfunc(x):
         return 1
 
 
-def sourceprob(obs, hsource, hslope, ngens=1000):
+def sourceprob(obs, hsource, hslope, ngens=1000, printiter=False):
     """takes values of observed and hypothesized source water (each type 'iso'), hypothesized EL slope value
     prior probability of source, and number of parameter draws
 
@@ -122,7 +122,8 @@ def sourceprob(obs, hsource, hslope, ngens=1000):
     HO['msk'] = HO.apply(lambda x: mskfunc(x), 1)
     HO['Sprob'] = HO['msk'] * HO['Sprob']
     goods = HO['msk'].sum()
-    print(f"{goods} out of {ngens}")
+    if printiter:
+        print(f"{goods} out of {ngens}")
     return HO
 
 

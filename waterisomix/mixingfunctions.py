@@ -39,6 +39,66 @@ def random_walk(initial_param, param_limit, step):
     return newParam  # Returns the list containing new parameters
 
 
+def hydro_mix_elev(source1, elev1, source2, elev2, mixture, lambda_prior, error_std_prior, number_iterations,
+                   lapse_rate_param, hyps_dic):
+    """Contains the core of HydroMix
+
+    Args:
+        source1 : Concentration data of source 1
+        elev1 : Elevation at which source 1 data is collected
+        source2 : Concentration data of source 2
+        elev2 : Elevation at which source 2 data is collected
+        mixture : Concentration data of the mixture made up of a linear combination of sources 1 and 2
+        lambda_prior : prior distribution of the proportion of source1 in the mixture
+        error_std_prior : prior distribution of the error standard deviation
+        number_iterations : Number of times HydroMix has be run
+        lapse_rate_param : List of potential isotopic lapse rates
+        hyps_dic : Key is elevation and value is the percent of catchment at that elevation
+
+    Returns:
+         a tuple containing log likelihood values, lambda values and error standard deviations for all the model runs
+
+    """
+
+    likelihood = []
+    for i in range(0, number_iterations, 1):
+        # For displaying purposes
+        if i % 100 == 0:
+            print("Iteration number:" + str(i + 1))
+        temp_source1, temp_source2 = [], []  # Values for source 1 and source 2 isotopic ratio after transformation
+
+        # Incorporating lapse rate effect in the isotopic ratio of source1 (snow) and source2(rain)
+        for index in range(len(source1)):
+            temp_iso, temp_elev = source1[index], elev1[index]
+            temp_source1.append(catchment_avg_isotope(temp_iso, temp_elev, lapse_rate_param[i], hyps_dic))
+        for index in range(len(source2)):
+            temp_iso, temp_elev = source2[index], elev2[index]
+            temp_source2.append(catchment_avg_isotope(temp_iso, temp_elev, lapse_rate_param[i], hyps_dic))
+
+        # Computing likelihood
+        temp_likelihood = []
+        for temp_mix in mixture:
+            temp_value = 0.
+            temp_residual = []
+            for temp_s1 in temp_source1:
+                for temp_s2 in temp_source2:
+                    temp_estimated_mix = lambda_prior[i] * 1. * temp_s1 + (1 - lambda_prior[i]) * temp_s2 * 1.
+
+                    # Likelihood computation
+                    temp_value += (-1 * (temp_estimated_mix - temp_mix) ** 2) / (2 * (error_std_prior[i] ** 2))
+                    temp_value -= (0.5 * np.log(2 * np.pi * error_std_prior[i] * error_std_prior[i]))
+                    temp_residual.append(temp_estimated_mix - temp_mix)
+
+            temp_likelihood.append(temp_value)
+        likelihood.append(np.sum(temp_likelihood))
+
+    # Sorting the parameter sets by best runs (highest likelihood values)
+    zipped = sorted(zip(likelihood, lambda_prior, error_std_prior, lapse_rate_param), reverse=True)
+    likelihood, lambda_prior, error_std_prior, lapse_rate_param = zip(*zipped)
+
+    return likelihood, lambda_prior, error_std_prior, lapse_rate_param
+
+
 def hydro_mix_mcmc(source1, source2, mixture, std_dev, param_init, param_limit, nb_iter, random_walk_step=5):
     """Contains the core of HydroMix
 

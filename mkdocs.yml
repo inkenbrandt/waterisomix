@@ -1,4 +1,4 @@
-site_name: hydromix
+site_name: waterisomix
 
 nav:
     - Home: index.md
@@ -7,6 +7,6 @@ theme: readthedocs
 
 repo_url: Fill in your repo url here
 
-site_description: This is the documentation site for hydromix.
+site_description: This is the documentation site for waterisomix.
 
 site_author: Site created by Paul Inkenbrandt. Original package written by Harsh Beria.
