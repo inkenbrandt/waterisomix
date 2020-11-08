@@ -1,5 +1,5 @@
 # WaterIsoMix v0.0.1: a mixture of Bayesian mixing scripts for attributing uncertain hydrological sources 
-A mixture of scripts taken from `HydroMix` by [Harsh Beria] and `WaterCompare` by Gabriel Bowen. 
+A mixture of scripts taken from `HydroMix` by [Harsh Beria](https://github.com/harshberia93) and `WaterCompare` by [Gabriel Bowen](https://github.com/bumbanian). 
 
 ## HydroMix
 * `HydroMix` scripts in this library are the unofficial copy of the original downloaded from [the zenodo repository](https://doi.org/10.5281/zenodo.3475429) <br>
