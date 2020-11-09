@@ -19,8 +19,19 @@ from scipy.stats import norm
 # creates object of 'iso' data structure used to pass values to functions
 #####
 
-# takes values of H and O isotope composition, SD of each, and covariance
+#
 def iso(H, O, Hsd, Osd, HOc):
+    """takes values of H and O isotope composition, SD of each, and covariance
+    Args:
+        H: mean of d2H for specified source
+        O: mean of d18O for specified source
+        Hsd: d2H standard deviation
+        Osd: d18O standard deviation
+        HOc: covariance of O and H
+
+    Returns:
+        DataFrame of input variables
+    """
     varibs = {'H': H, 'O': O, 'Hsd': Hsd, 'Osd': Osd, 'HOc': HOc}
     for key in varibs.keys():
         if type(varibs[key]) == np.ndarray or type(varibs[key]) == list:
@@ -44,10 +55,12 @@ def iso(H, O, Hsd, Osd, HOc):
     else:
         print('lengths of data do not match')
 
+
 #####
 # --- single source implementation ----
 #####
-def rmvnorm(obs, ngens=1):
+
+def rmvnormapp(obs, ngens=1):
     mean = [obs['H'], obs['O']]
     sigma = [[obs['Hsd'] ** 2, obs['HOc'] * obs['Hsd'] * obs['Osd']],
              [obs['HOc'] * obs['Hsd'] * obs['Osd'], obs['Osd'] ** 2]]
@@ -206,8 +219,13 @@ def mixprob(obs, hsource, hslope, prior=None, shp=2, ngens=10000):
     nsource = len(hsource)
 
     mean = [obs['H'][0], obs['O'][0]]
-    sigma = [[obs['Hsd'][0] ** 2, obs['HOc'][0] * obs['Hsd'][0] * obs['Osd'][0]],
-             [obs['HOc'][0] * obs['Hsd'][0] * obs['Osd'][0], obs['Osd'][0] ** 2]]
+    sigma = np.array([[obs['Hsd'][0] ** 2, obs['HOc'][0] * obs['Hsd'][0] * obs['Osd'][0]],
+             [obs['HOc'][0] * obs['Hsd'][0] * obs['Osd'][0], obs['Osd'][0] ** 2]])
+    min_eig = np.min(np.real(np.linalg.eigvals(sigma)))
+    if min_eig < 0:
+        sigma -= 10*min_eig * np.eye(*sigma.shape)
+
+
 
     if prior is None:
         prior = np.repeat([1], nsource)
@@ -216,7 +234,7 @@ def mixprob(obs, hsource, hslope, prior=None, shp=2, ngens=10000):
     HO_hypo = {}
     while i <= ngens:
         HO_obs = np.random.multivariate_normal(mean, sigma, 1)[0]
-        hsource['HO_hypo'] = hsource.apply(lambda x: rmvnorm(x, 1), 1)
+        hsource['HO_hypo'] = hsource.apply(lambda x: rmvnormapp(x, 1), 1)
         alphas = prior / np.min(prior) * shp
         fracs = dirichlet.rvs(alphas, size=1)[0]
         H_h = hsource['HO_hypo'].apply(lambda x: x[0] * fracs[0], 1).sum()
