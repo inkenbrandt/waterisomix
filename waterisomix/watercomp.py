@@ -89,7 +89,7 @@ def rmvnorm(obs, ngens=10000):
 
 
 def mskfunc(x):
-    if x['H_h'] > x['H_obs'] or x['O_h'] > x['O_obs']:
+    if x['H_h'] > x['H_obs'] or x['O_h'] > x['O_obs'] or x['slope'] <= 0 or x['slope'] > 15:
         return 0
     else:
         return 1
@@ -104,9 +104,14 @@ def sourceprob(obs, hsource, hslope, ngens=1000, printiter=False):
         hsource: hypothesized source water
         hslope: hypothesized EL slope value (value, sd)
         ngens: number of parameter draws
+        printiter: optional output of iteration prints; default is False
 
     Returns:
-
+        Pandas Dataframe with index length ngens with new columns:
+            hypo_prob: source water prior probability of each draw [P(A)]
+            Sprob: relative conditional probability of each draw [P(B|A)]
+            slope: slope of each draw
+            b: intercept of each draw
     """
     # ngens observed values
     mean = [obs['H'][0], obs['O'][0]]
@@ -116,7 +121,7 @@ def sourceprob(obs, hsource, hslope, ngens=1000, printiter=False):
     s = np.random.multivariate_normal(mean, sigma, ngens)
     HO_obs = pd.DataFrame(s, columns=['H_obs', 'O_obs'])
 
-    HO_obs['obs_prob'] = HO_obs[['H_obs', 'O_obs']].apply(lambda x: multivariate_normal.pdf(x, mean=mean, cov=sigma), 1)
+    HO_obs['obs_prob'] = HO_obs[['H_obs', 'O_obs']].apply(lambda x: multivariate_normal.pdf(x, mean=mean, cov=sigma),1)
 
     # ngens hypothesized source values
     mean = [hsource['H'][0], hsource['O'][0]]
@@ -134,9 +139,13 @@ def sourceprob(obs, hsource, hslope, ngens=1000, printiter=False):
 
     HO['msk'] = HO.apply(lambda x: mskfunc(x), 1)
     HO['Sprob'] = HO['msk'] * HO['Sprob']
+
     goods = HO['msk'].sum()
+    HO['b'] = HO['H_obs'] - HO['S'] * HO['O_obs']
+
     if printiter:
         print(f"{goods} out of {ngens}")
+    HO = HO.drop(['msk'], axis=1)
     return HO
 
 
@@ -177,7 +186,7 @@ def mwlsource(obs, hslope, mwl=[8.01, 9.57, 167217291.1, 2564532.2, -8.096, 8067
         S = (HO_obs[0] - H_h) / (HO_obs[1] - O_h)
         Sprob = norm.pdf(S, hslope[0], hslope[1]) / norm.pdf(hslope[0], hslope[0], hslope[1])
 
-        if H_h > HO_obs[0] or O_h > HO_obs[1]:
+        if H_h > HO_obs[0] or O_h > HO_obs[1] or S <= 0 or S > 10:
             Sprob = 0
         else:
             pass
@@ -239,10 +248,10 @@ def mixprob(obs, hsource, hslope, prior=None, shp=2, ngens=10000):
         fracs = dirichlet.rvs(alphas, size=1)[0]
         H_h = hsource['HO_hypo'].apply(lambda x: x[0] * fracs[0], 1).sum()
         O_h = hsource['HO_hypo'].apply(lambda x: x[1] * fracs[0], 1).sum()
-        if (H_h > HO_obs[0]) or (O_h > HO_obs[1]):
+        S = (HO_obs[0] - H_h) / (HO_obs[1] - O_h)
+        if (H_h > HO_obs[0]) or (O_h > HO_obs[1]) or S <= 0 or S > 10:
             Sprob = 0
         else:
-            S = (HO_obs[0] - H_h) / (HO_obs[1] - O_h)
             Sprob = norm.pdf(S, hslope[0], hslope[1]) / norm.pdf(hslope[0], hslope[0], hslope[1])
         if np.random.rand(1) < Sprob:
             obs_prob = multivariate_normal.pdf(HO_obs, mean, cov=sigma)
