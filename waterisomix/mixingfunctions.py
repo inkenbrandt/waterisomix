@@ -102,19 +102,19 @@ def hydro_mix_elev(source1, elev1, source2, elev2, mixture, lambda_prior, error_
 def hydro_mix_mcmc(source1, source2, mixture, std_dev, param_init, param_limit, nb_iter, random_walk_step=5):
     """Contains the core of HydroMix
 
-	Args:
+    Args:
         source1 : Concentration data of source 1
-	    source2 : Concentration data of source 2
-	    mixture : Concentration data of the mixture made up of a linear combination of sources 1 and 2
-	    std_dev : Standard deviation of the mixture (specified apriori and not calibrated)
-	    param_init : Initial value of the list of parameters ([lambdaValue, stdValue])
-	    param_limit : Lower and upper limits of the list of parameters ([[lambdaLowVal, lambdaHighVal])
-	    nb_iter : Number of MCMC runs
-	    random_walk_step : In percentage to define the maximum extent of jump from the current parameter state
+        source2 : Concentration data of source 2
+        mixture : Concentration data of the mixture made up of a linear combination of sources 1 and 2
+        std_dev : Standard deviation of the mixture (specified apriori and not calibrated)
+        param_init : Initial value of the list of parameters ([lambdaValue, stdValue])
+        param_limit : Lower and upper limits of the list of parameters ([[lambdaLowVal, lambdaHighVal])
+        nb_iter : Number of MCMC runs
+        random_walk_step : In percentage to define the maximum extent of jump from the current parameter state
 
-	Returns a tuple containing [[LOG LIKELIHOOD VALUES], [PARAMETER VALUES]]
+    Returns a tuple containing [[LOG LIKELIHOOD VALUES], [PARAMETER VALUES]]
 
-	"""
+    """
 
     logLikelihoodLis = []
     param_lis = [param_init]
@@ -275,11 +275,11 @@ def hydro_mix_weighted(source1, source1_weight, source2, source2_weight, mixture
     """Contains the core of HydroMix
 
     Args:
-        source1 => Concentration data of source 1
+        source1 (list): Concentration data of source 1
         source1_weight =>
-        source2 => Concentration data of source 2
+        source2 (list): Concentration data of source 2
         source2_weight =>
-        mixture => Concentration data of the mixture made up of a linear combination of sources 1 and 2
+        mixture (list): Concentration data of the mixture made up of a linear combination of sources 1 and 2
         lambda_prior => prior distribution of the proportion of source1 in the mixture
         error_std_prior => prior distribution of the error standard deviation
         number_iterations => Number of times HydroMix has be run

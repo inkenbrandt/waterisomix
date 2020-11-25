@@ -22,11 +22,11 @@ def get_content(*filename:str) -> str:
     return content
 
 setuptools.setup(
-    name = "waterisomix", # TODO: Give the package a name
-    version = "0.1.1", # I recommend every 2nd decimal release (i.e. 0.x.0) for big releases and 3rd (i.e. 0.0.x) for bug fixes.
-    author = "Harsh Beria", # TODO: Add your name
-    author_email = "harsh.beria@unil.ch", # TODO: Add your email
-    description = "A new Bayesian mixing framework for attributing uncertain hydrological sources ", # TODO: Give the package a description
+    name = "waterisomix",
+    version = "0.2.0", # I recommend every 2nd decimal release (i.e. 0.x.0) for big releases and 3rd (i.e. 0.0.x) for bug fixes.
+    author = "Paul Inkenbrandt",
+    author_email = "paulinkenbrandt@utah.gov",
+    description = "A mix of tools for working with mixtures of stable isotopes of H and O from hydrological sources ",
     long_description = get_content("README.md", "CHANGELOG.md"),
     long_description_content_type = "text/markdown",
     # Replace https://github.com/canadian-coding/python-package-template with your repo github URL 

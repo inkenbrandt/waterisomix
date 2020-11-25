@@ -89,7 +89,7 @@ def rmvnorm(obs, ngens=10000):
 
 
 def mskfunc(x):
-    if x['H_h'] > x['H_obs'] or x['O_h'] > x['O_obs'] or x['slope'] <= 0 or x['slope'] > 15:
+    if x['H_h'] > x['H_obs'] or x['O_h'] > x['O_obs'] or x['S'] <= 0 or x['S'] > 15:
         return 0
     else:
         return 1
@@ -133,9 +133,9 @@ def sourceprob(obs, hsource, hslope, ngens=1000, printiter=False):
     HO_h['hypo_prob'] = HO_h[['H_h', 'O_h']].apply(lambda x: multivariate_normal.pdf(x, mean=mean, cov=sigma), 1)
 
     HO = pd.concat([HO_obs, HO_h], axis=1)
-    HO['slope'] = (HO['H_obs'] - HO['H_h']) / (HO['O_obs'] - HO['O_h'])
+    HO['S'] = (HO['H_obs'] - HO['H_h']) / (HO['O_obs'] - HO['O_h'])
 
-    HO['Sprob'] = norm.pdf(HO['slope'], hslope[0], hslope[1]) / norm.pdf(hslope[0], hslope[0], hslope[1])
+    HO['Sprob'] = norm.pdf(HO['S'], hslope[0], hslope[1]) / norm.pdf(hslope[0], hslope[0], hslope[1])
 
     HO['msk'] = HO.apply(lambda x: mskfunc(x), 1)
     HO['Sprob'] = HO['msk'] * HO['Sprob']
